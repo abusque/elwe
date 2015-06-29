@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <byteswap.h>
-#include "elf.h"
+#include <elf.h>
 
 /* Determine native endianness in order to convert when reading an ELF
  * file if there is a mismatch */
