@@ -92,8 +92,8 @@ struct elwe_phdr *elwe_elf_get_phdr(struct elwe_elf *elf, uint16_t index)
 
 	if (!IS_NATIVE_ENDIAN(elf->endianness)) {
 		phdr->p_type = bswap_32(phdr->p_type);
-		phdr->p_memsz = bswap_32(phdr->p_memsz);
-		phdr->p_align = bswap_32(phdr->p_align);
+		phdr->p_memsz = bswap_64(phdr->p_memsz);
+		phdr->p_align = bswap_64(phdr->p_align);
 	}
 
 	return phdr;

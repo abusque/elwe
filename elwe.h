@@ -38,8 +38,8 @@ struct elwe_elf {
 
 struct elwe_phdr {
 	uint32_t p_type;
-	uint32_t p_memsz;
-	uint32_t p_align;
+	uint64_t p_memsz;
+	uint64_t p_align;
 };
 
 struct elwe_elf *elwe_elf_create(const char *path);
