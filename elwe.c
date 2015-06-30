@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <math.h>
 #include "elwe.h"
 
 struct elwe_elf *elwe_elf_create(const char *path)
@@ -116,7 +115,7 @@ uint64_t elwe_elf_get_memsz(struct elwe_elf *elf)
 	uint64_t memsz = 0;
 
 	for (i = 0; i < elf->phnum; ++i) {
-		double p_memsz, segment_size;
+		uint64_t align;
 		struct elwe_phdr *phdr = elwe_elf_get_phdr(elf, i);
 
 		if (phdr == NULL) {
@@ -131,10 +130,10 @@ uint64_t elwe_elf_get_memsz(struct elwe_elf *elf)
 		}
 
 		/* Take into account the segment alignment when
-		 * computing its memory size */
-		p_memsz = (double) phdr->p_memsz;
-		segment_size = ceil(p_memsz / phdr->p_align) * phdr->p_align;
-		memsz += (uint64_t) segment_size;
+		 * computing its memory size. Alignment of 0 actually
+		 * means no alignment, i.e. aligned to 1 byte */
+		align = phdr->p_align != 0 ? phdr->p_align : 1;
+		memsz += (phdr->p_memsz + align - 1) & ~(align - 1);
 		free(phdr);
 	}
 

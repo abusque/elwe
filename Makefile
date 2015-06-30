@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-c -Wall -g
-LDFLAGS=-lm
+LDFLAGS=
 SOURCES=main.c elwe.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=elwe
