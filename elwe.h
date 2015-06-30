@@ -38,13 +38,22 @@ struct elwe_elf {
 
 struct elwe_phdr {
 	uint32_t p_type;
+	uint64_t p_offset;
+	uint64_t p_filesz;
 	uint64_t p_memsz;
 	uint64_t p_align;
+};
+
+struct elwe_nhdr {
+	uint32_t n_namesz;
+	uint32_t n_descsz;
+	uint32_t n_type;
 };
 
 struct elwe_elf *elwe_elf_create(const char *path);
 void elwe_elf_destroy(struct elwe_elf *elf);
 
 uint64_t elwe_elf_get_memsz(struct elwe_elf *elf);
+uint8_t *elwe_elf_get_build_id(struct elwe_elf *elf, size_t *length);
 
 #endif	/* _ELWE_H */

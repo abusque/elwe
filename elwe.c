@@ -80,18 +80,24 @@ struct elwe_phdr *elwe_elf_get_phdr(struct elwe_elf *elf, uint16_t index)
 		Elf32_Phdr elf_phdr;
 		fread(&elf_phdr, sizeof(elf_phdr), 1, elf->file);
 		phdr->p_type = elf_phdr.p_type;
+		phdr->p_offset = elf_phdr.p_offset;
+		phdr->p_filesz = elf_phdr.p_filesz;
 		phdr->p_memsz = elf_phdr.p_memsz;
 		phdr->p_align = elf_phdr.p_align;
 	} else {
 		Elf64_Phdr elf_phdr;
 		fread(&elf_phdr, sizeof(elf_phdr), 1, elf->file);
 		phdr->p_type = elf_phdr.p_type;
+		phdr->p_offset = elf_phdr.p_offset;
+		phdr->p_filesz = elf_phdr.p_filesz;
 		phdr->p_memsz = elf_phdr.p_memsz;
 		phdr->p_align = elf_phdr.p_align;
 	}
 
 	if (!IS_NATIVE_ENDIAN(elf->endianness)) {
 		phdr->p_type = bswap_32(phdr->p_type);
+		phdr->p_offset = bswap_64(phdr->p_offset);
+		phdr->p_filesz = bswap_64(phdr->p_filesz);
 		phdr->p_memsz = bswap_64(phdr->p_memsz);
 		phdr->p_align = bswap_64(phdr->p_align);
 	}
@@ -136,4 +142,74 @@ uint64_t elwe_elf_get_memsz(struct elwe_elf *elf)
 
 err:
 	return -1;
+}
+
+uint8_t *elwe_elf_get_build_id(struct elwe_elf *elf, size_t *length)
+{
+	uint16_t i;
+	uint8_t *digest = NULL;
+
+	for (i = 0; i < elf->phnum; ++i) {
+		uint64_t offset, segment_end;
+		struct elwe_phdr *phdr = elwe_elf_get_phdr(elf, i);
+
+		if (phdr == NULL) {
+			goto err;
+		}
+
+		/* Build ID will be contained in a PT_NOTE segment */
+		if (phdr->p_type != PT_NOTE) {
+			free(phdr);
+			continue;
+		}
+
+		offset = phdr->p_offset;
+		segment_end = offset + phdr->p_filesz;
+
+		while (offset < segment_end) {
+			struct elwe_nhdr nhdr;
+
+			/* We seek manually because if the note isn't
+			 * the build id the data following the header
+			 * will not have been read */
+			fseek(elf->file, offset, SEEK_SET);
+			fread(&nhdr, sizeof(nhdr), 1, elf->file);
+
+			if (!IS_NATIVE_ENDIAN(elf->endianness)) {
+				nhdr.n_namesz = bswap_32(nhdr.n_namesz);
+				nhdr.n_descsz = bswap_32(nhdr.n_descsz);
+				nhdr.n_type = bswap_32(nhdr.n_type);
+			}
+
+			offset += sizeof(nhdr) + nhdr.n_namesz;
+
+			if (nhdr.n_type != NT_GNU_BUILD_ID) {
+				/* Ignore non build id notes but still
+				 * increase the offset. The desc data
+				 * is 4-byte aligned, but this padding
+				 * (if any), is not included in
+				 * n_descsz, so we round up to the
+				 * nearest multiple of 4*/
+				offset += (nhdr.n_descsz + 4 - 1) & ~(4 - 1);
+				continue;
+			}
+
+			*length = nhdr.n_descsz;
+			digest = malloc(*length);
+
+			fseek(elf->file, offset, SEEK_SET);
+			fread(digest, sizeof(uint8_t), *length, elf->file);
+
+			/* Build ID has been found, no need to read
+			 * following notes */
+			break;
+		}
+
+		free(phdr);
+	}
+
+	return digest;
+
+err:
+	return NULL;
 }
